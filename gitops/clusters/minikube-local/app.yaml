@@ -1,0 +1,49 @@
+# Application deployment manifest for local Minikube development
+# For local testing and development
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitops-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitops-app
+  template:
+    metadata:
+      labels:
+        app: gitops-app
+    spec:
+      containers:
+      - name: app
+        image: <ECR_REPO_URL>:<IMAGE_TAG>
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "local"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitops-app
+  namespace: default
+spec:
+  selector:
+    app: gitops-app
+  ports:
+  - port: 3000
+    targetPort: 3000
+  type: NodePort
+

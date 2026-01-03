@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  address     String?
+  phone       String?
+  email       String            @unique
+  logo        String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  menuItems   MenuItem[]
+  orders      Order[]
+  owners      RestaurantOwner[]
+  tables      Table[]
+  staff       User[]
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String?
+  email            String            @unique
+  emailVerified    DateTime?
+  password         String
+  image            String?
+  restaurantId     String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  role             UserRole          @default(STAFF)
+  accounts         Account[]
+  orders           Order[]
+  ownedRestaurants RestaurantOwner[]
+  sessions         Session[]
+  restaurant       Restaurant?       @relation(fields: [restaurantId], references: [id])
+  loginAttempts    Int       @default(0)
+  lastFailedLogin  DateTime?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+}
+
+model RestaurantOwner {
+  id           String     @id @default(cuid())
+  userId       String
+  restaurantId String
+  role         UserRole   @default(RESTAURANT_OWNER)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, restaurantId])
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  ipAddress    String?
+  isValid      Boolean  @default(true)
+  userAgent    String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Table {
+  id           String      @id @default(cuid())
+  number       Int
+  capacity     Int         @default(4)
+  qrCode       String      @unique
+  restaurantId String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  status       TableStatus @default(AVAILABLE)
+  orders       Order[]
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+
+  @@unique([restaurantId, number])
+}
+
+model MenuItem {
+  id           String       @id @default(cuid())
+  name         String
+  description  String?
+  price        Float
+  category     MenuCategory
+  image        String?
+  isAvailable  Boolean      @default(true)
+  restaurantId String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id])
+  orderItems   OrderItem[]
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  tableId         String
+  restaurantId    String
+  userId          String?
+  customerName    String
+  customerPhone   String
+  specialRequests String?
+  totalAmount     Float
+  paymentMethod   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  restaurant      Restaurant    @relation(fields: [restaurantId], references: [id])
+  table           Table         @relation(fields: [tableId], references: [id])
+  user            User?         @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  quantity   Int
+  menuItemId String
+  orderId    String
+  price      Float
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  order      Order    @relation(fields: [orderId], references: [id])
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  RESTAURANT_OWNER
+  RESTAURANT_ADMIN
+  STAFF
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
+enum MenuCategory {
+  STARTER
+  MAIN_COURSE
+  DRINKS
+  DESSERT
+  SIDES
+  SNACKS
+  BREAKFAST
+  LUNCH
+  DINNER
+}

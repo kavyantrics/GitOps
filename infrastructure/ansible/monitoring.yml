@@ -1,0 +1,27 @@
+---
+# Monitoring stack setup
+# Prometheus, Grafana, Alertmanager
+
+- name: Setup monitoring stack
+  hosts: monitoring
+  become: yes
+  tasks:
+    - name: Create monitoring directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /opt/prometheus
+        - /opt/grafana
+        - /opt/alertmanager
+
+    - name: Install Prometheus
+      # Add Prometheus installation here
+      debug:
+        msg: "Prometheus installation placeholder"
+
+    - name: Install Grafana
+      # Add Grafana installation here
+      debug:
+        msg: "Grafana installation placeholder"
+

@@ -1,0 +1,28 @@
+---
+# Jenkins installation and configuration
+# Runs on t3.medium EC2 instance
+
+- name: Setup Jenkins
+  hosts: jenkins
+  become: yes
+  tasks:
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    - name: Add Jenkins repository
+      # Add Jenkins repo setup here
+      debug:
+        msg: "Jenkins repository setup placeholder"
+
+    - name: Install Jenkins
+      # Add Jenkins installation here
+      debug:
+        msg: "Jenkins installation placeholder"
+
+    - name: Configure Jenkins plugins
+      # Add plugin installation here
+      debug:
+        msg: "Jenkins plugins placeholder"
+

@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_REGION = 'us-east-1'
+        ECR_REPOSITORY = 'gitops-app'
+        DOCKERFILE_PATH = 'app/backend/Dockerfile'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                dir('app/backend') {
+                    sh 'npm ci'
+                    sh 'npm test'
+                    sh 'npm run lint'
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def imageTag = env.BUILD_NUMBER
+                    def ecrRegistry = sh(
+                        script: "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com",
+                        returnStdout: true
+                    ).trim()
+                    
+                    sh """
+                        docker build -t ${ECR_REPOSITORY}:${imageTag} -f ${DOCKERFILE_PATH} app/backend
+                        docker tag ${ECR_REPOSITORY}:${imageTag} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${imageTag}
+                        docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${imageTag}
+                    """
+                }
+            }
+        }
+        
+        stage('Update GitOps Manifest') {
+            steps {
+                script {
+                    def imageTag = env.BUILD_NUMBER
+                    sh """
+                        git config user.email "jenkins@example.com"
+                        git config user.name "Jenkins"
+                        sed -i 's|<ECR_REPO_URL>:<IMAGE_TAG>|${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${imageTag}|g' gitops/clusters/eks-prod/app.yaml
+                        git add gitops/clusters/*/app.yaml
+                        git commit -m "Update image tag to ${imageTag}" || true
+                        git push origin main
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
+
