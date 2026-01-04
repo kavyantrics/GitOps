@@ -1,0 +1,58 @@
+# ArgoCD AppProject
+# Defines project-level permissions and source repositories
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: gitops-platform
+  namespace: argocd
+  # Add finalizer to prevent deletion
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: GitOps Platform Project
+
+  # Source repositories allowed for this project
+  sourceRepos:
+    - '*'  # Allow all repositories (restrict in production)
+    # Or specify specific repos:
+    # - https://github.com/your-org/gitops-platform.git
+
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: '*'
+      server: '*'  # Allow all clusters
+    # Or specify specific destinations:
+    # - namespace: production
+    #   server: https://kubernetes.default.svc
+    # - namespace: development
+    #   server: https://kubernetes.default.svc
+
+  # Cluster resource allowlist
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # Namespace resource allowlist
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # Roles for RBAC
+  roles:
+    - name: admin
+      description: Admin role with full access
+      policies:
+        - p, proj:gitops-platform:admin, applications, *, gitops-platform/*, allow
+        - p, proj:gitops-platform:admin, repositories, get, *, allow
+      groups:
+        - argocd-admins
+
+    - name: developer
+      description: Developer role with limited access
+      policies:
+        - p, proj:gitops-platform:developer, applications, get, gitops-platform/*, allow
+        - p, proj:gitops-platform:developer, applications, sync, gitops-platform/*, allow
+      groups:
+        - developers
+

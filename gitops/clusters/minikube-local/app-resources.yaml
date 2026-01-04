@@ -1,11 +1,13 @@
-# Application deployment manifest for local Minikube development
-# For local testing and development
+# Kubernetes Resources for Local Minikube
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gitops-app
   namespace: default
+  labels:
+    app: gitops-app
+    environment: local
 spec:
   replicas: 1
   selector:
@@ -15,15 +17,20 @@ spec:
     metadata:
       labels:
         app: gitops-app
+        environment: local
     spec:
       containers:
       - name: app
         image: <ECR_REPO_URL>:<IMAGE_TAG>
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
+          name: http
         env:
         - name: NODE_ENV
           value: "local"
+        - name: PORT
+          value: "3000"
         resources:
           requests:
             memory: "128Mi"
@@ -31,19 +38,35 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
 
 ---
-# Service
 apiVersion: v1
 kind: Service
 metadata:
   name: gitops-app
   namespace: default
+  labels:
+    app: gitops-app
 spec:
+  type: NodePort
   selector:
     app: gitops-app
   ports:
   - port: 3000
     targetPort: 3000
-  type: NodePort
+    protocol: TCP
+    name: http
+    nodePort: 30080
 

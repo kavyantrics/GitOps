@@ -1,0 +1,85 @@
+# ArgoCD Helm Chart Values
+# Customize ArgoCD installation
+
+global:
+  image:
+    tag: "v2.10.0"  # Use latest stable version
+
+server:
+  # Enable ingress for external access
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - argocd.example.com  # Change to your domain
+    tls:
+      - secretName: argocd-tls
+        hosts:
+          - argocd.example.com
+  
+  # Service configuration
+  service:
+    type: LoadBalancer  # Or ClusterIP with ingress
+  
+  # Enable metrics
+  metrics:
+    enabled: true
+  
+  # Resource limits
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+controller:
+  # Enable metrics
+  metrics:
+    enabled: true
+  
+  # Resource limits
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+repoServer:
+  # Resource limits
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+applicationSet:
+  enabled: true
+
+# RBAC configuration
+configs:
+  rbac:
+    # Allow all authenticated users to read
+    policy.default: role:readonly
+    # Allow admin to do everything
+    policy.csv: |
+      p, role:admin, applications, *, */*, allow
+      p, role:admin, clusters, get, *, allow
+      p, role:admin, repositories, get, *, allow
+      p, role:admin, repositories, create, *, allow
+      p, role:admin, repositories, update, *, allow
+      p, role:admin, repositories, delete, *, allow
+      g, argocd-admins, role:admin
+
+# Repository credentials (optional - use secrets for production)
+# configs:
+#   repositories: |
+#     - url: https://github.com/your-org/gitops-platform.git
+#       type: git
+#       name: gitops-platform
+

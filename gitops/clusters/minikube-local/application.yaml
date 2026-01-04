@@ -1,0 +1,25 @@
+# ArgoCD Application CRD for Local Minikube
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitops-app-local
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: gitops-platform
+  source:
+    repoURL: https://github.com/your-org/gitops-platform.git
+    targetRevision: main
+    path: gitops/clusters/minikube-local
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false  # Use default namespace
+

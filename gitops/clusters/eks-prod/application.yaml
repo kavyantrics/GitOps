@@ -1,0 +1,46 @@
+# ArgoCD Application CRD
+# This defines what ArgoCD should sync
+# The actual Kubernetes resources are in app-resources.yaml
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitops-app-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: gitops-platform  # Use the AppProject we created
+  source:
+    repoURL: https://github.com/your-org/gitops-platform.git  # Update with your repo
+    targetRevision: main
+    path: gitops/clusters/eks-prod
+    # If using Helm:
+    # helm:
+    #   valueFiles:
+    #     - values-prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true      # Delete resources when removed from Git
+      selfHeal: true   # Automatically sync if cluster state drifts
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # Ignore differences for fields that change frequently
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # Ignore replica count changes made by HPA
+
